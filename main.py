@@ -8,6 +8,10 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as grid
 from sklearn.manifold import TSNE
 
+slim = tf.contrib.slim
+ds = tf.contrib.distributions
+st = tf.contrib.bayesflow.stochastic_tensor
+graph_replace = tf.contrib.graph_editor.graph_replace
 #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.25)
 
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -94,6 +98,27 @@ def decoder(Z):
     
     return out_X, tf.nn.sigmoid(out_X)
 
+def discriminator(U, n_layer=2, n_hidden=128, reuse=False):
+    """ U:(n_samples, inp_data_dim, rank) """
+    with tf.variable_scope("V", reuse=reuse):
+        # U = tf.reshape(U, [-1, latent_dim*rank])
+        h = slim.repeat(U,n_layer,slim.fully_connected,n_hidden,activation_fn=lrelu,weights_regularizer=slim.l2_regularizer(0.1))
+        h = slim.fully_connected(h,1,activation_fn=None,weights_regularizer=slim.l2_regularizer(0.1))
+    return h
+
+def get_disc_loss(p_samples, q_samples):
+    """ formulates the loss function which optimises the discriminator such that the output of
+        discriminator is log p/q """
+    p_ratio = discriminator(p_samples)
+    q_ratio = discriminator(q_samples, reuse=True)
+    d_loss_d = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=p_ratio, labels=tf.ones_like(p_ratio)))
+    d_loss_i = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=q_ratio, labels=tf.zeros_like(q_ratio)))
+    dloss_u = d_loss_d+d_loss_i
+    return dloss_u
+
+def get_forward_KL(p_samples):
+    return tf.reduce_mean(discriminator(p_samples))
+
 def sample_Z():
     global epsilon
     global encoder_mean, encoder_log_var
@@ -130,6 +155,11 @@ loss_vae = tf.reduce_mean(loss_rkl + loss_recon)
 
 step_vae = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(loss_vae)
 step_fkl = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(loss_fkl, var_list=tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope="Encoder"))
+
+##########################################
+d_loss = get_disc_loss(decoded_X_mean, X) # discriminator loss Eq. 3.3 from AVB
+loss_term = get_forward_KL(decoded_X_mean) # calculates E_p[log p/q]
+###########################################
 
 sess = tf.Session()
 tf.global_variables_initializer().run(session=sess)
