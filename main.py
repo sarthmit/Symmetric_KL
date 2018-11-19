@@ -195,70 +195,83 @@ def sample_plot(epoch):
 
 make_dirs()
 
-def vae_routine(epoch):
-    J = 0.0
-    for i in range(epoch_len):
-        X_batch = mnist.train.next_batch(config.batch_size)[0]
-        out = sess.run(
-            [loss_vae, step_vae],
-            feed_dict={
-                X: X_batch,
-                epsilon: np.random.randn(config.batch_size, config.latent_dim)
-            }
-        )
-        J += out[0] / epoch_len
-    
-    print("Epoch %d: %.3f" % (epoch, J))
-    if epoch%10 == 0:
-        sample_plot(epoch)
+def vae_routine():
+	X_batch = mnist.train.next_batch(config.batch_size)[0]
+	out = sess.run([loss_vae, step_vae], feed_dict={X:X_batch, epsilon: np.radom.randn(config.batch_size, config.latent_dim)})
+	return out[0]
 
-def fkl_routine(epoch):
-    J = 0.0
-    for i in range(epoch_len):
-        X_batch = mnist.train.next_batch(config.batch_size)[0]
-        out = sess.run(
-            [loss_fkl, step_fkl],
-            feed_dict={
-                X: X_batch,
-                epsilon: np.random.randn(config.batch_size, config.latent_dim)
-            }
-        )
-        J += out[0] / epoch_len
-    
-    print("Epoch %d: %.3f" % (epoch, J))
-    if epoch%10 == 0:
-        sample_plot(epoch)
+def fkl_routine():
+	X_batch = mnist.train.next_batch(config.batch_size)[0]
+	out = sess.run([loss_fkl, step_fkl], feed_dict={X:X_batch, epsilon:np.random.randn(config.batch_size, config.latent_dim)})
+	return out[0]
 
-def combined_routine(epoch):
-    J1 = J2 = 0.0
-    for i in range(epoch_len):
-        X_batch = mnist.train.next_batch(config.batch_size)[0]
-        out = sess.run(
-            [loss_vae, step_vae],
-            feed_dict={
-                X: X_batch,
-                epsilon: np.random.randn(config.batch_size, config.latent_dim)
-            }
-        )
-        J1 += out[0] / epoch_len
+def disc_routine():
+	# Train the discriminator to get the ratio accurately
 
-        out = sess.run(
-            [loss_fkl, step_fkl],
-            feed_dict={
-                X: X_batch,
-                epsilon: np.random.randn(config.batch_size, config.latent_dim)
-            }
-        )
-        J2 += out[0] / epoch_len
+def gen_routine():
+	# Train the decoder according to gradient from discriminator
+
+
+# def vae_routine(epoch):
+#     J = 0.0
+#     for i in range(epoch_len):
+#         X_batch = mnist.train.next_batch(config.batch_size)[0]
+#         out = sess.run(
+#             [loss_vae, step_vae],
+#             feed_dict={
+#                 X: X_batch,
+#                 epsilon: np.random.randn(config.batch_size, config.latent_dim)
+#             }
+#         )
+#         J += out[0] / epoch_len
     
-    print("Epoch %d: %.3f \t %.3f" % (epoch, J1, J2))
-    if epoch%10 == 0:
-        sample_plot(epoch)	
+#     print("Epoch %d: %.3f" % (epoch, J))
+#     if epoch%10 == 0:
+#         sample_plot(epoch)
+
+# def fkl_routine(epoch):
+#     J = 0.0
+#     for i in range(epoch_len):
+#         X_batch = mnist.train.next_batch(config.batch_size)[0]
+#         out = sess.run(
+#             [loss_fkl, step_fkl],
+#             feed_dict={
+#                 X: X_batch,
+#                 epsilon: np.random.randn(config.batch_size, config.latent_dim)
+#             }
+#         )
+#         J += out[0] / epoch_len
+    
+#     print("Epoch %d: %.3f" % (epoch, J))
+#     if epoch%10 == 0:
+#         sample_plot(epoch)
+
+# def combined_routine(epoch):
+#     J1 = J2 = 0.0
+#     for i in range(epoch_len):
+#         X_batch = mnist.train.next_batch(config.batch_size)[0]
+#         out = sess.run(
+#             [loss_vae, step_vae],
+#             feed_dict={
+#                 X: X_batch,
+#                 epsilon: np.random.randn(config.batch_size, config.latent_dim)
+#             }
+#         )
+#         J1 += out[0] / epoch_len
+
+#         out = sess.run(
+#             [loss_fkl, step_fkl],
+#             feed_dict={
+#                 X: X_batch,
+#                 epsilon: np.random.randn(config.batch_size, config.latent_dim)
+#             }
+#         )
+#         J2 += out[0] / epoch_len
+    
+#     print("Epoch %d: %.3f \t %.3f" % (epoch, J1, J2))
+#     if epoch%10 == 0:
+#         sample_plot(epoch)	
 
 for epoch in range(1,config.n_epochs+1):
-    combined_routine(epoch)
-    # vae_routine(epoch)
-    # fkl_routine(epoch)
-
-for epoch in range(1,11):
-    fkl_routine(epoch)
+	for _ in xrange(epoch_len):
+		vae_routine()
