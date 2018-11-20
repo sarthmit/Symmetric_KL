@@ -10,13 +10,13 @@ from sklearn.manifold import TSNE
 
 slim = tf.contrib.slim
 ds = tf.contrib.distributions
-st = tf.contrib.bayesflow.stochastic_tensor
 graph_replace = tf.contrib.graph_editor.graph_replace
 #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.25)
 
 tf.logging.set_verbosity(tf.logging.ERROR)
 
 ds = tf.contrib.distributions
+lrelu = tf.nn.leaky_relu
 xav_init = tf.contrib.layers.xavier_initializer()
 
 mnist = tf.contrib.learn.datasets.mnist.load_mnist(train_dir="mnist_data")
@@ -98,11 +98,11 @@ def decoder(Z):
     
     return out_X, tf.nn.sigmoid(out_X)
 
-def discriminator(U, n_layer=2, n_hidden=128, reuse=False):
+def discriminator(U, n_layer=2, n_hidden=128):
     """ U:(n_samples, inp_data_dim, rank) """
-    with tf.variable_scope("V", reuse=reuse):
+    with tf.variable_scope("V", reuse=tf.AUTO_REUSE):
         # U = tf.reshape(U, [-1, latent_dim*rank])
-        h = slim.repeat(U,n_layer,slim.fully_connected,n_hidden,activation_fn=lrelu,weights_regularizer=slim.l2_regularizer(0.1))
+        h = slim.repeat(U,n_layer,slim.fully_connected,n_hidden,activation_fn=tf.nn.leaky_relu,weights_regularizer=slim.l2_regularizer(0.1))
         h = slim.fully_connected(h,1,activation_fn=None,weights_regularizer=slim.l2_regularizer(0.1))
     return h
 
@@ -110,7 +110,7 @@ def get_disc_loss(p_samples, q_samples):
     """ formulates the loss function which optimises the discriminator such that the output of
         discriminator is log p/q """
     p_ratio = discriminator(p_samples)
-    q_ratio = discriminator(q_samples, reuse=True)
+    q_ratio = discriminator(q_samples)
     d_loss_d = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=p_ratio, labels=tf.ones_like(p_ratio)))
     d_loss_i = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=q_ratio, labels=tf.zeros_like(q_ratio)))
     dloss_u = d_loss_d+d_loss_i
@@ -147,7 +147,8 @@ loss_rkl = 0.5*tf.reduce_sum(tf.exp(encoder_log_var) + encoder_mean**2. -1. - en
 X_gen, _ = decoder(epsilon)
 z_gen_mean, z_gen_log_var = encoder(X_gen)
 
-loss_fkl = tf.reduce_mean(0.5*tf.reduce_sum(z_gen_log_var + tf.exp(-z_gen_log_var)*((z_gen_mean-epsilon)**2.), axis=1))
+# loss_fkl = tf.reduce_mean(0.5*tf.reduce_sum(z_gen_log_var + tf.exp(-z_gen_log_var)*((z_gen_mean-epsilon)**2.), axis=1))
+loss_fkl = tf.reduce_mean(0.5*tf.reduce_sum(tf.exp(-z_gen_log_var)*((z_gen_mean-epsilon)**2.), axis=1))
 
 ################################################## Losses #########################
 
@@ -193,11 +194,26 @@ def sample_plot(epoch):
     plt.savefig("Plots/Samples/" + str(epoch) + ".png")
     plt.close()
 
+
+def latent_two(epoch):
+	X_test = mnist.test.images
+	y_test = mnist.test.labels
+	for i in xrange(10):
+		latent = sess.run(encoder_mean, feed_dict={X:X_test[i*1000:(i+1)*1000,:]})
+		plt.scatter(latent[:,0], latent[:,1], c=y_test[i*1000:(i+1)*1000], cmap="tab20c", s=5)
+	plt.tight_layout()
+	plt.colorbar()
+	plt.savefig("Plots/Samples/Latent_{}.png".format(str(epoch)))
+	plt.close()
+
+def tsne(epoch):
+	pass
+
 make_dirs()
 
 def vae_routine():
 	X_batch = mnist.train.next_batch(config.batch_size)[0]
-	out = sess.run([loss_vae, step_vae], feed_dict={X:X_batch, epsilon: np.radom.randn(config.batch_size, config.latent_dim)})
+	out = sess.run([loss_vae, step_vae], feed_dict={X:X_batch, epsilon: np.random.randn(config.batch_size, config.latent_dim)})
 	return out[0]
 
 def fkl_routine():
@@ -207,9 +223,11 @@ def fkl_routine():
 
 def disc_routine():
 	# Train the discriminator to get the ratio accurately
+	pass
 
 def gen_routine():
 	# Train the decoder according to gradient from discriminator
+	pass
 
 
 # def vae_routine(epoch):
@@ -273,5 +291,12 @@ def gen_routine():
 #         sample_plot(epoch)	
 
 for epoch in range(1,config.n_epochs+1):
+	L_vae = 0.0
+	L_fkl = 0.0
 	for _ in xrange(epoch_len):
-		vae_routine()
+		L_vae += vae_routine()/epoch_len
+		L_fkl += fkl_routine()/epoch_len
+
+	print "Epoch: %d \t %f \t %f" %(epoch, L_vae, L_fkl)
+	sample_plot(epoch)
+	latent_two(epoch)
