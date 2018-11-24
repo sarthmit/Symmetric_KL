@@ -160,6 +160,10 @@ step_fkl = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(loss_fkl, var_l
 ##########################################
 d_loss = get_disc_loss(decoded_X_mean, X) # discriminator loss Eq. 3.3 from AVB
 loss_term = get_forward_KL(decoded_X_mean) # calculates E_p[log p/q]
+
+step_d = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(d_loss, var_list=tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope="V"))
+step_forward = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(loss_term, var_list=tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope="Decoder"))
+
 ###########################################
 
 sess = tf.Session()
@@ -223,12 +227,15 @@ def fkl_routine():
 
 def disc_routine():
 	# Train the discriminator to get the ratio accurately
-	pass
+	X_batch = mnist.train.next_batch(config.batch_size)[0]
+	out = sess.run([d_loss, step_d], feed_dict={X:X_batch, epsilon: np.random.randn(config.batch_size, config.latent_dim)})
+	return out[0]
 
 def gen_routine():
 	# Train the decoder according to gradient from discriminator
-	pass
-
+	X_batch = mnist.train.next_batch(config.batch_size)[0]
+	out = sess.run([loss_term, step_forward], feed_dict={X:X_batch, epsilon: np.random.randn(config.batch_size, config.latent_dim)})
+	return out[0]
 
 # def vae_routine(epoch):
 #     J = 0.0
@@ -290,13 +297,33 @@ def gen_routine():
 #     if epoch%10 == 0:
 #         sample_plot(epoch)	
 
-for epoch in range(1,config.n_epochs+1):
-	L_vae = 0.0
-	L_fkl = 0.0
-	for _ in xrange(epoch_len):
-		L_vae += vae_routine()/epoch_len
-		L_fkl += fkl_routine()/epoch_len
+def paper_code():
+	for epoch in range(1,config.n_epochs+1):
+		L_vae = 0.0
+		for _ in xrange(epoch_len):
+			L_vae += vae_routine()/epoch_len
 
-	print "Epoch: %d \t %f \t %f" %(epoch, L_vae, L_fkl)
-	sample_plot(epoch)
-	latent_two(epoch)
+		print "Epoch: %d \t %f \t %f" %(epoch, L_vae)
+		sample_plot(epoch)
+		latent_two(epoch)
+
+	for epoch in range(1,config.n_epochs+1):
+		L_fkl = 0.0
+		for _ in xrange(epoch_len):
+			L_fkl += fkl_routine()/epoch_len
+
+		print "Epoch: %d \t %f" %(epoch, L_fkl)	
+
+def our_code():
+	for epoch in range(1,config.n_epochs+1):
+		L_fkl = 0.0
+		L_gen = 0.0
+		L_disc = 0.0
+		for i in xrange(epoch_len):
+			L_disc += disc_routine()/epoch_len
+			if i%10 == 0:
+				L_gen = gen_routine()/epoch_len
+				L_fkl = fkl_routine()/epoch_len
+		print "Epoch: %d \t %f \t %f \t %f" %(epoch, L_disc, L_gen, L_fkl)
+
+our_code()
