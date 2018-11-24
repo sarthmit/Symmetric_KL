@@ -4,6 +4,9 @@ import numpy as np
 from tqdm import tqdm
 import tensorflow as tf
 from sklearn import mixture
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as grid
 from sklearn.manifold import TSNE
@@ -295,8 +298,8 @@ for epoch in range(1,config.n_epochs+1):
 	L_fkl = 0.0
 	for _ in xrange(epoch_len):
 		L_vae += vae_routine()/epoch_len
-		L_fkl += fkl_routine()/epoch_len
+		#L_fkl += fkl_routine()/epoch_len
 
 	print "Epoch: %d \t %f \t %f" %(epoch, L_vae, L_fkl)
 	sample_plot(epoch)
-	latent_two(epoch)
+	# latent_two(epoch)
