@@ -147,8 +147,8 @@ loss_rkl = 0.5*tf.reduce_sum(tf.exp(encoder_log_var) + encoder_mean**2. -1. - en
 X_gen, _ = decoder(epsilon)
 z_gen_mean, z_gen_log_var = encoder(X_gen)
 
-# loss_fkl = tf.reduce_mean(0.5*tf.reduce_sum(z_gen_log_var + tf.exp(-z_gen_log_var)*((z_gen_mean-epsilon)**2.), axis=1))
-loss_fkl = tf.reduce_mean(0.5*tf.reduce_sum(tf.exp(-z_gen_log_var)*((z_gen_mean-epsilon)**2.), axis=1))
+loss_fkl = tf.reduce_mean(0.5*tf.reduce_sum(z_gen_log_var + tf.exp(-z_gen_log_var)*((z_gen_mean-epsilon)**2.), axis=1))
+# loss_fkl = tf.reduce_mean(0.5*tf.reduce_sum(tf.exp(-z_gen_log_var)*((z_gen_mean-epsilon)**2.), axis=1))
 
 ################################################## Losses #########################
 
@@ -158,6 +158,7 @@ step_vae = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(loss_vae)
 step_fkl = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(loss_fkl, var_list=tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope="Encoder"))
 
 ##########################################
+
 d_loss = get_disc_loss(decoded_X_mean, X) # discriminator loss Eq. 3.3 from AVB
 loss_term = get_forward_KL(decoded_X_mean) # calculates E_p[log p/q]
 
