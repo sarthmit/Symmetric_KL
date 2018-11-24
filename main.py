@@ -255,7 +255,8 @@ def paper_code():
 			L_fkl += fkl_routine()/epoch_len
 
 		print "Epoch: %d \t %f" %(epoch, L_fkl)	
-	saver.save(sess, "model.ckpt")
+	saver.save(sess, "./model.ckpt")
+	sample_plot(epoch)
 
 def our_code():
 	for epoch in range(1,config.n_epochs+1):
@@ -268,6 +269,7 @@ def our_code():
 				L_gen = gen_routine()/epoch_len
 				L_fkl = fkl_routine()/epoch_len
 		print "Epoch: %d \t %f \t %f \t %f" %(epoch, L_disc, L_gen, L_fkl)
-		saver.save(sess, "model.ckpt")
+		saver.save(sess, "./model.ckpt")
+		sample_plot(epoch)
 
 our_code()
