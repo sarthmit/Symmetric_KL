@@ -1,13 +1,13 @@
 input_dim = 784
-latent_dim = 2
+latent_dim = 32
 
-n_epochs = 25
+n_epochs = 50
 batch_size = 100
 
 regularizer = 1
 
-encoder_hidden_size = [256]
-decoder_hidden_size = [256]
+encoder_hidden_size = [1024,512,256,128]
+decoder_hidden_size = [128,256,512,1024]
 
 adam_decay_steps = 10
 adam_decay_rate = 0.9

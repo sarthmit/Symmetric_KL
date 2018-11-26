@@ -141,14 +141,14 @@ decoded_exp_X_mean, decoded_X_mean = decoder(z)
 loss_recon = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=X, logits=decoded_exp_X_mean), axis=1)
 loss_rkl = 0.5*tf.reduce_sum(tf.exp(encoder_log_var) + encoder_mean**2. -1. - encoder_log_var, axis=1)
 
-
 ################################################## FAVI ############################
 
-X_gen, _ = decoder(epsilon)
+_, X_gen = decoder(epsilon)
 z_gen_mean, z_gen_log_var = encoder(X_gen)
 
-loss_fkl = tf.reduce_mean(0.5*tf.reduce_sum(z_gen_log_var + tf.exp(-z_gen_log_var)*((z_gen_mean-epsilon)**2.), axis=1))
-# loss_fkl = tf.reduce_mean(0.5*tf.reduce_sum(tf.exp(-z_gen_log_var)*((z_gen_mean-epsilon)**2.), axis=1))
+l1 = tf.reduce_sum(z_gen_log_var, axis=1)
+l2 = tf.reduce_sum(tf.exp(-z_gen_log_var)*((z_gen_mean - epsilon)**2), axis=1)
+loss_fkl = tf.reduce_mean(0.5*(l1+l2))
 
 ################################################## Losses #########################
 
@@ -157,7 +157,7 @@ loss_vae = tf.reduce_mean(loss_rkl + loss_recon)
 step_vae = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(loss_vae)
 step_fkl = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(loss_fkl, var_list=tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope="Encoder"))
 
-##########################################
+###########################################
 
 d_loss = get_disc_loss(decoded_X_mean, X) # discriminator loss Eq. 3.3 from AVB
 loss_term = get_forward_KL(decoded_X_mean) # calculates E_p[log p/q]
@@ -200,6 +200,21 @@ def sample_plot(epoch):
     plt.savefig("Plots/Samples/" + str(epoch) + ".png")
     plt.close()
 
+def latent_reconstruction():
+	latent_err = 0.0
+	for i in xrange(10):
+		latent = np.random.randn(1000,config.latent_dim)
+		latent_recon = sess.run(z_gen_mean, feed_dict={epsilon:latent})
+		latent_err += np.mean(np.sum((latent_recon - latent)**2, axis=1))/10.0
+	print "Latent Reconstruction Error : {}".format(latent_err)
+
+def image_reconstruction():
+	X_test = mnist.test.images
+	recon_err = 0.0
+	for i in xrange(10):
+		recon = sess.run(decoded_X_mean, feed_dict={X:X_test[i*1000:(i+1)*1000,:], epsilon:np.random.randn(1000, config.latent_dim)})
+		recon_err += np.mean(np.sum((recon - X_test[i*1000:(i+1)*1000,:])**2, axis=1))/10.0
+	print "Image Reconstruction Error: {}".format(recon_err)
 
 def latent_two(epoch):
 	X_test = mnist.test.images
@@ -245,9 +260,10 @@ def paper_code():
 		for _ in xrange(epoch_len):
 			L_vae += vae_routine()/epoch_len
 		print "Epoch: %d \t %f" %(epoch, L_vae)
-		saver.save(sess, "./model.ckpt")
+		image_reconstruction()
+		latent_reconstruction()
 		sample_plot(epoch)
-		latent_two(epoch)
+		# latent_two(epoch)
 
 	for epoch in range(1,config.n_epochs+1):
 		L_fkl = 0.0
@@ -255,17 +271,23 @@ def paper_code():
 			L_fkl += fkl_routine()/epoch_len
 
 		print "Epoch: %d \t %f" %(epoch, L_fkl)	
+		image_reconstruction()
+		latent_reconstruction()
 		sample_plot(epoch)
+		# latent_two(epoch)
 
 def alt_code_with_vae():
 	for epoch in range(1,config.n_epochs+1):
 		L_vae = 0.0
 		L_fkl = 0.0
-		for _ in xrange(epoch_len):
+		for i in xrange(epoch_len):
 			L_vae += vae_routine()/epoch_len
-			L_fkl += fkl_routine()/epoch_len
+			if i%5 == 0:
+				L_fkl += fkl_routine()/epoch_len
 		print "Epoch: %d \t %f \t %f" %(epoch, L_vae, L_fkl)
 		saver.save(sess, "./model.ckpt")
+		image_reconstruction()
+		latent_reconstruction()
 		sample_plot(epoch)
 		latent_two(epoch)
 
