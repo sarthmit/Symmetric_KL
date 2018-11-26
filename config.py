@@ -1,5 +1,5 @@
 input_dim = 784
-latent_dim = 2
+latent_dim = 10
 
 n_epochs = 30
 batch_size = 100

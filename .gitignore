@@ -1,3 +1,6 @@
 Plots/
-mnist*
+checkpoint
+mnist.*
+model.*
 *.pyc
+mnist_*

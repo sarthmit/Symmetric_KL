@@ -150,8 +150,8 @@ loss_rkl = 0.5*tf.reduce_sum(tf.exp(encoder_log_var) + encoder_mean**2. -1. - en
 X_gen, _ = decoder(epsilon)
 z_gen_mean, z_gen_log_var = encoder(X_gen)
 
-# loss_fkl = tf.reduce_mean(0.5*tf.reduce_sum(z_gen_log_var + tf.exp(-z_gen_log_var)*((z_gen_mean-epsilon)**2.), axis=1))
-loss_fkl = tf.reduce_mean(0.5*tf.reduce_sum(tf.exp(-z_gen_log_var)*((z_gen_mean-epsilon)**2.), axis=1))
+loss_fkl = tf.reduce_mean(0.5*tf.reduce_sum(z_gen_log_var + tf.exp(-z_gen_log_var)*((z_gen_mean-epsilon)**2.), axis=1))
+# loss_fkl = tf.reduce_mean(0.5*tf.reduce_sum(tf.exp(-z_gen_log_var)*((z_gen_mean-epsilon)**2.), axis=1))
 
 ################################################## Losses #########################
 
@@ -161,6 +161,7 @@ step_vae = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(loss_vae)
 step_fkl = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(loss_fkl, var_list=tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope="Encoder"))
 
 ##########################################
+
 d_loss = get_disc_loss(decoded_X_mean, X) # discriminator loss Eq. 3.3 from AVB
 loss_term = get_forward_KL(decoded_X_mean) # calculates E_p[log p/q]
 
@@ -168,6 +169,8 @@ step_d = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(d_loss, var_list=
 step_forward = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(loss_term, var_list=tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope="Decoder"))
 
 ###########################################
+
+saver = tf.train.Saver(var_list=tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope="Decoder"))
 
 sess = tf.Session()
 tf.global_variables_initializer().run(session=sess)
@@ -185,7 +188,6 @@ def sample_plot(epoch):
     for k in range(0, 10):
         for i in range(0, 10):
             eps = np.random.randn(1, config.latent_dim)
-            
             decoded_image = sess.run(
                 decoded_X_mean,
                 feed_dict={
@@ -311,6 +313,7 @@ def old_code():
 		print "Epoch: %d \t %f \t %f" %(epoch, L_vae, L_fkl)
 		sample_plot(epoch)
 		# latent_two(epoch)
+
 def paper_code():
 	for epoch in range(1,config.n_epochs+1):
 		L_vae = 0.0
@@ -327,6 +330,7 @@ def paper_code():
 			L_fkl += fkl_routine()/epoch_len
 
 		print "Epoch: %d \t %f" %(epoch, L_fkl)	
+	saver.save(sess, "model.ckpt")
 
 def our_code():
 	for epoch in range(1,config.n_epochs+1):
@@ -338,7 +342,7 @@ def our_code():
 			if i%10 == 0:
 				L_gen = gen_routine()/epoch_len
 				L_fkl = fkl_routine()/epoch_len
-				print "L_fkl: {}".format(L_fkl)
 		print "Epoch: %d \t %f \t %f \t %f" %(epoch, L_disc, L_gen, L_fkl)
+		saver.save(sess, "./model.ckpt")
 
 our_code()
