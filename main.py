@@ -4,6 +4,9 @@ import numpy as np
 from tqdm import tqdm
 import tensorflow as tf
 from sklearn import mixture
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as grid
 from sklearn.manifold import TSNE
@@ -254,6 +257,78 @@ def gen_routine():
 	out = sess.run([loss_term, step_forward], feed_dict={X:X_batch, epsilon: np.random.randn(config.batch_size, config.latent_dim)})
 	return out[0]
 
+# def vae_routine(epoch):
+#     J = 0.0
+#     for i in range(epoch_len):
+#         X_batch = mnist.train.next_batch(config.batch_size)[0]
+#         out = sess.run(
+#             [loss_vae, step_vae],
+#             feed_dict={
+#                 X: X_batch,
+#                 epsilon: np.random.randn(config.batch_size, config.latent_dim)
+#             }
+#         )
+#         J += out[0] / epoch_len
+    
+#     print("Epoch %d: %.3f" % (epoch, J))
+#     if epoch%10 == 0:
+#         sample_plot(epoch)
+
+# def fkl_routine(epoch):
+#     J = 0.0
+#     for i in range(epoch_len):
+#         X_batch = mnist.train.next_batch(config.batch_size)[0]
+#         out = sess.run(
+#             [loss_fkl, step_fkl],
+#             feed_dict={
+#                 X: X_batch,
+#                 epsilon: np.random.randn(config.batch_size, config.latent_dim)
+#             }
+#         )
+#         J += out[0] / epoch_len
+    
+#     print("Epoch %d: %.3f" % (epoch, J))
+#     if epoch%10 == 0:
+#         sample_plot(epoch)
+
+# def combined_routine(epoch):
+#     J1 = J2 = 0.0
+#     for i in range(epoch_len):
+#         X_batch = mnist.train.next_batch(config.batch_size)[0]
+#         out = sess.run(
+#             [loss_vae, step_vae],
+#             feed_dict={
+#                 X: X_batch,
+#                 epsilon: np.random.randn(config.batch_size, config.latent_dim)
+#             }
+#         )
+#         J1 += out[0] / epoch_len
+
+#         out = sess.run(
+#             [loss_fkl, step_fkl],
+#             feed_dict={
+#                 X: X_batch,
+#                 epsilon: np.random.randn(config.batch_size, config.latent_dim)
+#             }
+#         )
+#         J2 += out[0] / epoch_len
+    
+#     print("Epoch %d: %.3f \t %.3f" % (epoch, J1, J2))
+#     if epoch%10 == 0:
+#         sample_plot(epoch)	
+
+def old_code():
+	for epoch in range(1,config.n_epochs+1):
+		L_vae = 0.0
+		L_fkl = 0.0
+		for _ in xrange(epoch_len):
+			L_vae += vae_routine()/epoch_len
+			#L_fkl += fkl_routine()/epoch_len
+
+		print "Epoch: %d \t %f \t %f" %(epoch, L_vae, L_fkl)
+		sample_plot(epoch)
+		# latent_two(epoch)
+
 def paper_code():
 	for epoch in range(1,config.n_epochs+1):
 		L_vae = 0.0
@@ -303,6 +378,7 @@ def alt_code_with_disc():
 				L_fkl = fkl_routine()/epoch_len
 		print "Epoch: %d \t %f \t %f \t %f" %(epoch, L_disc, L_gen, L_fkl)
 		saver.save(sess, "./model.ckpt")
+our_code()
 		sample_plot(epoch)
 
 paper_code()
