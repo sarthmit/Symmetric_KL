@@ -76,13 +76,13 @@ def log_joint(y, z, lam, prior_cov, likelihood_cov):
     The log joint distribution of the model.
     :return:
     '''
-    print "log joint function: Shapes of arguments:"
-    print "y:",y.shape
-    print "z:",z.shape
-    print "lam:",lam.shape
-    print "prior_cov:", prior_cov.shape
-    print "likelihood cov:", likelihood_cov.shape
-    
+    # print "log joint function: Shapes of arguments:"
+    # print "y:",y.shape
+    # print "z:",z.shape
+    # print "lam:",lam.shape
+    # print "prior_cov:", prior_cov.shape
+    # print "likelihood cov:", likelihood_cov.shape
+
     plog_prior = mvn.logpdf(z, lam.T, prior_cov)
     plog_likelihood = 0
     for ii in xrange(len(y)):
@@ -106,6 +106,9 @@ def bbvi_mccv_gaussian(lam=None, lam_true=None, adagrad=True, mccv=True):
     t = 0
     S = 25 # number of samples
 
+    mean_prior_samples = np.random.randn(K)
+    z_prior_samples = np.random.multivariate_normal(mean_prior_samples, prior_cov,S)
+
     if mccv: print "Using Markov Control Variates"
     else: print "Not using any Variance Reduction Methods"
 
@@ -128,10 +131,13 @@ def bbvi_mccv_gaussian(lam=None, lam_true=None, adagrad=True, mccv=True):
         hs = np.zeros((S,K))
 
         for ss in xrange(S):
-            joint, plog_prior, plog_likelihood = log_joint(y, z[ss,:].T, lam, prior_cov, likelihood_cov)
+            joint, plog_prior, plog_likelihood = log_joint(y, z[ss,:].T, mean_prior_samples, prior_cov, likelihood_cov)
             entropy = mvn.logpdf(z[ss,:].T, lam.T, posterior_cov)
             qg = qgrad(z[ss,:].T, lam.T, posterior_cov)
-            fs[ss,:] = qg * (joint - entropy)
+            qg_forward = qgrad(z_prior_samples[ss,:],lam.T, posterior_cov)
+            if t%10==0 and ss%5==0:
+                print "qg_forward:",qg_forward
+            fs[ss,:] = qg * (joint - entropy) - qg_forward # (ATTENTION using negative sign as we need to minimise the second term whereas ELBO is maximised)
             hs[ss,:] = qg
 
         if mccv:
