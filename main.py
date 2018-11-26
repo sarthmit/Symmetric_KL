@@ -319,8 +319,8 @@ def paper_code():
 		L_vae = 0.0
 		for _ in xrange(epoch_len):
 			L_vae += vae_routine()/epoch_len
-
-		print "Epoch: %d \t %f \t %f" %(epoch, L_vae)
+		print "Epoch: %d \t %f" %(epoch, L_vae)
+		saver.save(sess, "./model.ckpt")
 		sample_plot(epoch)
 		latent_two(epoch)
 
@@ -330,9 +330,21 @@ def paper_code():
 			L_fkl += fkl_routine()/epoch_len
 
 		print "Epoch: %d \t %f" %(epoch, L_fkl)	
-	saver.save(sess, "model.ckpt")
+		sample_plot(epoch)
 
-def our_code():
+def alt_code_with_vae():
+	for epoch in range(1,config.n_epochs+1):
+		L_vae = 0.0
+		L_fkl = 0.0
+		for _ in xrange(epoch_len):
+			L_vae += vae_routine()/epoch_len
+			L_fkl += fkl_routine()/epoch_len
+		print "Epoch: %d \t %f \t %f" %(epoch, L_vae, L_fkl)
+		saver.save(sess, "./model.ckpt")
+		sample_plot(epoch)
+		latent_two(epoch)
+
+def alt_code_with_disc():
 	for epoch in range(1,config.n_epochs+1):
 		L_fkl = 0.0
 		L_gen = 0.0
@@ -344,5 +356,7 @@ def our_code():
 				L_fkl = fkl_routine()/epoch_len
 		print "Epoch: %d \t %f \t %f \t %f" %(epoch, L_disc, L_gen, L_fkl)
 		saver.save(sess, "./model.ckpt")
-
 our_code()
+		sample_plot(epoch)
+
+paper_code()
